@@ -112,7 +112,6 @@ class Song:
     ):
         loop = asyncio.get_running_loop()
         ytdl = yt_dlp.YoutubeDL(YTDL_DOWNLOAD_OPTIONS)
-        # First, extract info without downloading to check for live content
         info_partial = functools.partial(ytdl.extract_info, url, download=False)
         try:
             info_data = await loop.run_in_executor(None, info_partial)
@@ -121,8 +120,30 @@ class Song:
             if "entries" in info_data:
                 info_data = info_data["entries"][0]
 
-            # Check for both is_live and was_live (Twitch uses was_live)
             is_live = info_data.get("is_live") or info_data.get("was_live") or False
+
+            # Additional robust check for generic/icecast/streams
+            if not is_live:
+                extractor = info_data.get("extractor_key", "").lower()
+                duration = info_data.get("duration")
+                formats = info_data.get("formats", [])
+                # If generic extractor and no duration, or only one format and it's a stream type
+                stream_exts = {"ogg", "mp3", "aac", "opus", "webm"}
+                if (
+                    (extractor == "generic" and duration is None)
+                    or (
+                        len(formats) == 1 and
+                        (formats[0].get("ext") in stream_exts or formats[0].get("protocol") in ("http", "https"))
+                    )
+                ):
+                    is_live = True
+                elif any(
+                    (f.get("protocol") in ("m3u8", "m3u8_native") and f.get("preference", 0) == 0)
+                    or f.get("is_live")
+                    for f in formats
+                ):
+                    is_live = True
+
             if is_live:
                 song = cls(info_data, requester)
                 song.is_live = True
