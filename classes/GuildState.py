@@ -57,10 +57,9 @@ class GuildState:
 
         source = discord.PCMVolumeTransformer(
             discord.FFmpegPCMAudio(
-                self.current_song.filepath,
+                self.current_song.url if self.current_song.is_live else self.current_song.filepath,
                 **self.current_song.get_playback_options()
             ),
-
             volume=self.volume,
         )
 
@@ -226,7 +225,11 @@ class GuildState:
         )
         embed.set_thumbnail(url=song.thumbnail)
         embed.add_field(name="Nghệ sĩ", value=song.uploader or "N/A", inline=True)
-        embed.add_field(name="Thời lượng", value=song.format_duration(), inline=True)
+        # Add live indicator to duration if song is live
+        duration_text = song.format_duration()
+        if getattr(song, "is_live", False):
+            duration_text = "🔴 LIVE"
+        embed.add_field(name="Thời lượng", value=duration_text, inline=True)
         embed.add_field(name="Yêu cầu bởi", value=song.requester.mention, inline=True)
         loop_status = {
             LoopMode.OFF: "Tắt",

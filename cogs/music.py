@@ -255,6 +255,11 @@ class MusicCog(commands.Cog, name="Miku"):
             title=f"🎤 Lời bài hát: {title}", color=0x39D0D6, url=state.current_song.url
         )
         embed.set_thumbnail(url=state.current_song.thumbnail)
+        # Add live indicator to duration if song is live
+        duration_text = state.current_song.format_duration()
+        if getattr(state.current_song, "is_live", False):
+            duration_text = "🔴 LIVE"
+        embed.add_field(name="Thời lượng", value=duration_text, inline=True)
         if len(lyrics) > 4096:
             lyrics = lyrics[:4090] + "\n\n**[Lời bài hát quá dài và đã được cắt bớt]**"
         if (
@@ -358,6 +363,12 @@ class MusicCog(commands.Cog, name="Miku"):
         if not state.voice_client or not state.current_song:
             return await self._send_response(
                 ctx, "Không có bài hát nào đang phát để tua.", ephemeral=True
+            )
+
+        # Disable seeking for live content
+        if getattr(state.current_song, "is_live", False):
+            return await self._send_response(
+                ctx, "Không thể tua đối với nội dung phát trực tiếp (LIVE).", ephemeral=True
             )
 
         match = re.match(r"(?:(\d+):)?(\d+)", timestamp)

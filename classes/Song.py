@@ -43,16 +43,20 @@ class Song:
         self.requester = requester
         self.data = data
         self.url = data.get("webpage_url") or data.get("url")
-        self.title = data.get("title")
+        self.title = data.get("title") or data.get("fulltitle") or "Unknown Title"
         self.thumbnail = data.get("thumbnail")
         self.duration = data.get("duration")
-        self.uploader = data.get("uploader")
+        self.uploader = data.get("uploader") or data.get("channel") or data.get("creator") or "Unknown"
+        self.is_live = False
         self.filepath = None
         self.start_time = 0
         self.id = data.get("id")
         self.guild: GuildState = None
 
     def format_duration(self):
+        # For live content, always return "🔴 LIVE"
+        if getattr(self, "is_live", False):
+            return "🔴 LIVE"
         if self.duration is None:
             return "N/A"
 
@@ -108,16 +112,33 @@ class Song:
     ):
         loop = asyncio.get_running_loop()
         ytdl = yt_dlp.YoutubeDL(YTDL_DOWNLOAD_OPTIONS)
-        partial = functools.partial(ytdl.extract_info, url, download=True)
+        # First, extract info without downloading to check for live content
+        info_partial = functools.partial(ytdl.extract_info, url, download=False)
         try:
-            data = await loop.run_in_executor(None, partial)
+            info_data = await loop.run_in_executor(None, info_partial)
+            if not info_data:
+                return None
+            if "entries" in info_data:
+                info_data = info_data["entries"][0]
 
+            # Check for both is_live and was_live (Twitch uses was_live)
+            is_live = info_data.get("is_live") or info_data.get("was_live") or False
+            if is_live:
+                song = cls(info_data, requester)
+                song.is_live = True
+                song.filepath = None
+                return song
+
+            # Not live, proceed to download
+            partial = functools.partial(ytdl.extract_info, url, download=True)
+            data = await loop.run_in_executor(None, partial)
             if not data:
                 return None
             if "entries" in data:
                 data = data["entries"][0]
 
             song = cls(data, requester)
+            song.is_live = False
             song.filepath = ytdl.prepare_filename(data)
             return song
         except Exception as e:
