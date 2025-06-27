@@ -43,10 +43,10 @@ class Song:
         self.requester = requester
         self.data = data
         self.url = data.get("webpage_url") or data.get("url")
-        self.title = data.get("title") or data.get("fulltitle") or "Unknown Title"
+        self.title = data.get("title") or data.get("fulltitle") or "Không có tiêu đề"
         self.thumbnail = data.get("thumbnail")
         self.duration = data.get("duration")
-        self.uploader = data.get("uploader") or data.get("channel") or data.get("creator") or "Unknown"
+        self.uploader = data.get("uploader") or data.get("channel") or data.get("creator") or "Không rõ"
         self.is_live = False
         self.filepath = None
         self.start_time = 0

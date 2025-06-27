@@ -243,7 +243,7 @@ class GuildState:
         )
         total_songs = self.queue.qsize() + (1 if self.current_song else 0)
         embed.set_footer(
-            text=f"Tiếp theo: {next_song_title} | Lặp: {loop_status[self.loop_mode]} | Tổng cộng: {total_songs} bài"
+            text=f"Tiếp theo: {next_song_title} • Lặp: {loop_status[self.loop_mode]} • Tổng cộng: {total_songs} bài"
         )
         return embed
 
